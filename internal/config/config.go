@@ -2,46 +2,38 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 )
 
-const configFileName = ".gatorconfig.json"
+const configFileName = ".gotorrconfig.json"
 
 type Config struct {
 	DbURL       string `json:"db_url"`
 	CurrentUser string `json:"current_user_name"`
 }
 
-func Read() Config {
+func Read() (Config, error) {
 	ConfigFilePath, err := getConfigFilePath()
 	if err != nil {
-		return Config{}
+		return Config{}, err
 	}
 	dat, err := os.ReadFile(ConfigFilePath)
 	if err != nil {
-		panic(err)
+		return Config{}, err
 	}
 
 	var cfg Config
 	if err := json.Unmarshal(dat, &cfg); err != nil {
-		panic(err)
+		return Config{}, err
 	}
-	return cfg
+	return cfg, nil
 }
 
 func (cfg *Config) SetUser(userName string) error {
-	if len(userName) == 0 {
-		return errors.New("username can't be empty")
-	}
-
 	cfg.CurrentUser = userName
-	if err := write(*cfg); err != nil {
-		return fmt.Errorf("write data error: %w", err)
-	}
-	return nil
+	return write(*cfg)
 }
 
 func write(cfg Config) error {
@@ -49,10 +41,12 @@ func write(cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("marshal data error: %w", err)
 	}
+
 	ConfigFilePath, err := getConfigFilePath()
 	if err != nil {
 		return err
 	}
+
 	os.WriteFile(ConfigFilePath, dat, 0600)
 	return nil
 }
@@ -62,5 +56,5 @@ func getConfigFilePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(homeDir, configFileName), nil
+	return filepath.Join(homeDir, configFileName), nil
 }
