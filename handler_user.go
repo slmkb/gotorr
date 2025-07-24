@@ -26,7 +26,7 @@ func handlerLogin(s *state, cmd command) error {
 		return fmt.Errorf("could not retrive user: %w", err)
 	}
 
-	fmt.Printf("User '%s' logged in successfully\n", username)
+	fmt.Printf("User %s logged in successfully\n", username)
 	return nil
 }
 
@@ -61,5 +61,30 @@ func handlerRegister(s *state, cmd command) error {
 
 	fmt.Printf("User %s successfully created\n", dbu.Name)
 	log.Printf("database user created: %+v", dbu)
+	return nil
+}
+
+func handlerReset(s *state, cmd command) error {
+	if err := s.db.DeleteUsers(context.Background()); err != nil {
+		return fmt.Errorf("reset handler error: %w", err)
+	}
+	fmt.Println("Database reset successfull")
+	return nil
+}
+
+func handlerUsers(s *state, cmd command) error {
+	users, err := s.db.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("get users error: %w", err)
+	}
+
+	currentUser := s.cfg.CurrentUser
+	for _, name := range users {
+		if name == currentUser {
+			fmt.Printf("* %s (current)\n", name)
+		} else {
+			fmt.Printf("* %s\n", name)
+		}
+	}
 	return nil
 }

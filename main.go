@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"gotorr/internal/config"
 	"gotorr/internal/database"
 	"log"
@@ -40,6 +39,8 @@ func main() {
 	}
 	commands.register("login", handlerLogin)
 	commands.register("register", handlerRegister)
+	commands.register("reset", handlerReset)
+	commands.register("users", handlerUsers)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("Please provide a command\n")
@@ -51,7 +52,6 @@ func main() {
 	}
 
 	if err := commands.run(&s, cmd); err != nil {
-		fmt.Fprintf(os.Stderr, "Command error: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Command error: %v\n", err)
 	}
 }
