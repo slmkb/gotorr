@@ -17,13 +17,14 @@ func handlerLogin(s *state, cmd command) error {
 	}
 
 	username := cmd.arguments[0]
-	if err := s.cfg.SetUser(username); err != nil {
-		return fmt.Errorf("could not set current user: %w", err)
-	}
 
 	_, err := s.db.GetUser(context.Background(), username)
 	if err != nil {
 		return fmt.Errorf("could not retrive user: %w", err)
+	}
+
+	if err := s.cfg.SetUser(username); err != nil {
+		return fmt.Errorf("could not set current user: %w", err)
 	}
 
 	fmt.Printf("User %s logged in successfully\n", username)
