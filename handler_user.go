@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"gotorr/internal/database"
 	"log"
@@ -40,15 +39,9 @@ func handlerRegister(s *state, cmd command) error {
 	createUserParams := database.CreateUserParams{
 		ID: uuid.New(),
 
-		CreatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		UpdatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		Name: username,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      username,
 	}
 
 	dbu, err := s.db.CreateUser(context.Background(), createUserParams)

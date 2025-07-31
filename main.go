@@ -44,6 +44,8 @@ func main() {
 	commands.register("agg", handlerAggregate)
 	commands.register("addfeed", handlerAddFeed)
 	commands.register("feeds", handlerListFeeds)
+	commands.register("follow", handlerFollowFeed)
+	commands.register("following", handlerGetFeeds)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("Please provide a command\n")

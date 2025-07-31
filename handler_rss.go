@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"gotorr/internal/database"
 	"time"
@@ -38,21 +37,12 @@ func handlerAddFeed(s *state, cmd command) error {
 	// }
 
 	feedParams := database.CreateFeedParams{
-		ID: uuid.New(),
-		CreatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		UpdatedAt: sql.NullTime{
-			Time:  time.Now(),
-			Valid: true,
-		},
-		Name: feedName,
-		Url:  feedUrl,
-		UserID: uuid.NullUUID{
-			UUID:  currentUser.ID,
-			Valid: true,
-		},
+		ID:        uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name:      feedName,
+		Url:       feedUrl,
+		UserID:    currentUser.ID,
 	}
 
 	feeddb, err := s.db.CreateFeed(context.Background(), feedParams)
@@ -60,6 +50,16 @@ func handlerAddFeed(s *state, cmd command) error {
 		return fmt.Errorf("feed creation error: %w", err)
 	}
 
-	fmt.Println(feeddb)
+	feedFolowParams := database.CreateFeedFollowParams{
+		ID:        uuid.New(),
+		CreatedAt: feeddb.CreatedAt,
+		UpdatedAt: feeddb.UpdatedAt,
+		UserID:    feeddb.UserID,
+		FeedID:    feedParams.ID,
+	}
+	_, err = s.db.CreateFeedFollow(context.Background(), feedFolowParams)
+	if err != nil {
+		return fmt.Errorf("feed follow creation error: %w", err)
+	}
 	return nil
 }
