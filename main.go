@@ -42,10 +42,12 @@ func main() {
 	commands.register("reset", handlerReset)
 	commands.register("users", handlerUsers)
 	commands.register("agg", handlerAggregate)
-	commands.register("addfeed", handlerAddFeed)
+	commands.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	commands.register("feeds", handlerListFeeds)
-	commands.register("follow", handlerFollowFeed)
-	commands.register("following", handlerGetFeeds)
+	commands.register("follow", middlewareLoggedIn(handlerFollowFeed))
+	commands.register("following", middlewareLoggedIn(handlerGetFeeds))
+	commands.register("unfollow", middlewareLoggedIn(handlerUnfollowFeed))
+	commands.register("browse", middlewareLoggedIn(handlerBrowse))
 
 	if len(os.Args) < 2 {
 		log.Fatalf("Please provide a command\n")

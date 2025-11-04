@@ -9,7 +9,8 @@ CREATE TABLE feeds(
 	user_id UUID NOT NULL,
 	CONSTRAINT fk_users
 	FOREIGN KEY (user_id)
-	REFERENCES users(id)  ON DELETE CASCADE
+	REFERENCES users(id)  ON DELETE CASCADE,
+	last_fetched_at TIMESTAMP
 );
 
 -- +goose Down

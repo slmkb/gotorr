@@ -4,62 +4,100 @@ import (
 	"context"
 	"fmt"
 	"gotorr/internal/database"
+	"log"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 func handlerAggregate(s *state, cmd command) error {
-	feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
-	if err != nil {
-		return fmt.Errorf("handlerAggregate error: %w", err)
-	}
-	fmt.Println(feed)
-	return nil
-}
-
-func handlerAddFeed(s *state, cmd command) error {
-	if len(cmd.arguments) < 2 {
-		return fmt.Errorf("usage: %s <name> <url>", cmd.name)
-	}
-
-	currentUser, err := s.db.GetUser(context.Background(), s.cfg.CurrentUser)
-	if err != nil {
-		return fmt.Errorf("could not retrive user: %w", err)
-	}
-
-	feedName := cmd.arguments[0]
-	feedUrl := cmd.arguments[1]
-
-	// feed, err := fetchFeed(context.Background(), feedUrl)
+	// feed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
 	// if err != nil {
 	// 	return fmt.Errorf("handlerAggregate error: %w", err)
 	// }
-
-	feedParams := database.CreateFeedParams{
-		ID:        uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name:      feedName,
-		Url:       feedUrl,
-		UserID:    currentUser.ID,
+	// fmt.Println(feed)
+	var time_between_reqs time.Duration
+	var err error
+	if len(cmd.arguments) != 0 {
+		time_between_reqs, err = time.ParseDuration(cmd.arguments[0])
+		if err != nil {
+			log.Printf("parse time error: %v", err)
+			time_between_reqs = time.Second * 30
+		}
+	} else {
+		time_between_reqs = time.Second * 30
 	}
+	log.Printf("Collecting feeds every %s", time_between_reqs)
+	ticker := time.NewTicker(time_between_reqs)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
+	// return nil
+}
 
-	feeddb, err := s.db.CreateFeed(context.Background(), feedParams)
+func scrapeFeeds(s *state) {
+	dbFeed, err := s.db.GetNextFeedToFetch(context.Background())
 	if err != nil {
-		return fmt.Errorf("feed creation error: %w", err)
+		log.Printf("scrape feeds: %v", err)
+	}
+	exitId := dbFeed.ID
+	var currentId uuid.UUID
+	for currentId != exitId {
+		dbFeed, err = s.db.GetNextFeedToFetch(context.Background())
+		if err != nil {
+			log.Printf("scrape feeds: %v", err)
+		}
+		err = s.db.MarkFeedFetched(context.Background(), dbFeed.ID)
+		if err != nil {
+			log.Printf("scrape feeds: %v", err)
+		}
+		currentId = dbFeed.ID
+		urlFeed, err := fetchFeed(context.Background(), dbFeed.Url)
+		if err != nil {
+			log.Printf("scrape feeds: %v", err)
+		}
+		for _, item := range urlFeed.Channel.Item {
+			pubDate, err := time.Parse(time.RFC1123Z, item.PubDate)
+			if err != nil {
+				log.Printf("time parse: %v", err)
+			}
+			_, err = s.db.CreatePost(context.Background(), database.CreatePostParams{
+				ID:          uuid.New(),
+				Title:       item.Title,
+				Url:         item.Link,
+				Description: item.Description,
+				PublishedAt: pubDate,
+				FeedID:      dbFeed.ID,
+			})
+			if err != nil {
+				log.Printf("create post: %v", err)
+			}
+		}
+	}
+}
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	limit := 2
+	var err error
+	if len(cmd.arguments) != 0 {
+		limit, err = strconv.Atoi(cmd.arguments[0])
+		if err != nil {
+			log.Printf("handler browse argument error: %v", err)
+			limit = 2
+		}
 	}
 
-	feedFolowParams := database.CreateFeedFollowParams{
-		ID:        uuid.New(),
-		CreatedAt: feeddb.CreatedAt,
-		UpdatedAt: feeddb.UpdatedAt,
-		UserID:    feeddb.UserID,
-		FeedID:    feedParams.ID,
-	}
-	_, err = s.db.CreateFeedFollow(context.Background(), feedFolowParams)
+	posts, err := s.db.GetPostsForUser(context.Background(), database.GetPostsForUserParams{
+		Name:  s.cfg.CurrentUser,
+		Limit: int32(limit),
+	})
 	if err != nil {
-		return fmt.Errorf("feed follow creation error: %w", err)
+		log.Printf("handler browse argument error: %v", err)
+		return err
+	}
+	for _, post := range posts {
+		fmt.Println(post)
 	}
 	return nil
 }
