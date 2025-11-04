@@ -53,3 +53,5 @@ After installing and setting up PostgreSQL, you can run gotorr with the followin
 ## License
 
 Distributed under the MIT License.
+
+gator
